@@ -73,6 +73,20 @@ const forgotPasswordController = async(req, res) => {
 
 const resetPasswordController = async(req, res) => {
     try{
+    const {resetToken} = req.params;
+    const {password} = req.body;
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const user = await User.findOne({resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }})
+    if(!user)
+    {
+        return res.status(400).json({ success: false, message: "Invalid or expired reset token"});
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
     res.status(200).json({success:true, message:"Reset Password Successfully"});
     }
     catch(err)
